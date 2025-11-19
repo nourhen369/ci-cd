@@ -18,3 +18,7 @@ variable "tenant_id" {
   description = "Azure Tenant ID"
   type        = string
 }
+
+variable "ssh_public_key" {
+  description = "Clé publique SSH pour l'accès à la VM"
+}
