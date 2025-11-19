@@ -19,7 +19,7 @@ pipeline {
                     "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID",
                     "ARM_CLIENT_ID=$ARM_CLIENT_ID",
                     "ARM_CLIENT_SECRET=$ARM_CLIENT_SECRET",
-                    "ARM_TENANT_ID=$ARM_TENANT_ID"
+                    "ARM_TENANT_ID=$ARM_TENANT_ID",
                     "SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY"
                 ]) {
                     sh """
