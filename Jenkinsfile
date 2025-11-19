@@ -16,11 +16,11 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 withCredentials([
-                    "ARM_SUBSCRIPTION_ID=$ARM_SUBSCRIPTION_ID",
-                    "ARM_CLIENT_ID=$ARM_CLIENT_ID",
-                    "ARM_CLIENT_SECRET=$ARM_CLIENT_SECRET",
-                    "ARM_TENANT_ID=$ARM_TENANT_ID",
-                    "SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY"
+                    string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
+                    string(credentialsId: 'azure-client-id',       variable: 'ARM_CLIENT_ID'),
+                    string(credentialsId: 'azure-client-secret',   variable: 'ARM_CLIENT_SECRET'),
+                    string(credentialsId: 'azure-tenant-id',       variable: 'ARM_TENANT_ID'),
+                    string(credentialsId: 'ssh-public-key',        variable: 'SSH_PUBLIC_KEY')
                 ]) {
                     sh """
                     bash -c '
