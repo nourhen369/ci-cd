@@ -1,3 +1,7 @@
+# Ignore local terraform env file containing secrets
+terraform/.env
+terraform/*terraform*
+
 venv
 __pycache__/
 *.pyc
