@@ -2,55 +2,54 @@ pipeline {
     agent any
 
     environment {
-        TF_DIR = 'terraform'
+        ARM_SUBSCRIPTION_ID = credentials('ARM_SUBSCRIPTION_ID')
+        ARM_CLIENT_ID       = credentials('ARM_CLIENT_ID')
+        ARM_CLIENT_SECRET   = credentials('ARM_CLIENT_SECRET')
+        ARM_TENANT_ID       = credentials('ARM_TENANT_ID')
+        SSH_PUBLIC_KEY      = credentials('SSH_PUBLIC_KEY')
+        TF_WORKING_DIR      = "terraform"
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Terraform Init') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
-                    string(credentialsId: 'azure-client-id',       variable: 'ARM_CLIENT_ID'),
-                    string(credentialsId: 'azure-client-secret',   variable: 'ARM_CLIENT_SECRET'),
-                    string(credentialsId: 'azure-tenant-id',       variable: 'ARM_TENANT_ID'),
-                    string(credentialsId: 'ssh-public-key',        variable: 'SSH_PUBLIC_KEY')
-                ]) {
+                dir("${TF_WORKING_DIR}") {
                     sh """
-                    bash -c '
-                    set -euo pipefail
-                    cd ${TF_DIR}
-                    terraform init -input=false
-                    terraform plan -out=tfplan -input=false -var "subscription_id=$ARM_SUBSCRIPTION_ID" -var "client_id=$ARM_CLIENT_ID" -var "client_secret=$ARM_CLIENT_SECRET" -var "tenant_id=$ARM_TENANT_ID" -var "ssh_public_key=$SSH_PUBLIC_KEY"
-                    terraform apply -auto-approve tfplan
-                    '
+                        terraform init \
+                        -backend-config="resource_group_name=TerraformStateRG" \
+                        -backend-config="storage_account_name=tfstateaccount" \
+                        -backend-config="container_name=tfstate" \
+                        -backend-config="key=terraform.tfstate"
                     """
                 }
             }
         }
 
-        stage('Generate Ansible Inventory') {
+        stage('Terraform Plan') {
             steps {
-                sh 'bash -c "set -euo pipefail; cd ${TF_DIR}; VM_IP=$(terraform output -raw vm_public_ip); echo \"[web]\" > ../inventory.ini; echo \"${VM_IP} ansible_user=azureuser\" >> ../inventory.ini"'
+                dir("${TF_WORKING_DIR}") {
+                    sh """
+                        terraform plan -out=tfplan \
+                        -var "subscription_id=${ARM_SUBSCRIPTION_ID}" \
+                        -var "client_id=${ARM_CLIENT_ID}" \
+                        -var "client_secret=${ARM_CLIENT_SECRET}" \
+                        -var "tenant_id=${ARM_TENANT_ID}" \
+                        -var "ssh_public_key=${SSH_PUBLIC_KEY}"
+                    """
+                }
             }
         }
 
-        stage('Run Ansible Playbook') {
+        stage('Terraform Apply') {
             steps {
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'jenkins-ssh-key',
-                        keyFileVariable: 'SSH_KEY_FILE',
-                        usernameVariable: 'SSH_USER'
-                    )
-                ]) {
-                    sh 'bash -c "set -euo pipefail; chmod 600 \$SSH_KEY_FILE; /opt/ansible-venv/bin/ansible-playbook -i inventory.ini playbook.yml --private-key \$SSH_KEY_FILE -u \$SSH_USER -e \"ansible_python_interpreter=/usr/bin/python3\""'
+                dir("${TF_WORKING_DIR}") {
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
         }
