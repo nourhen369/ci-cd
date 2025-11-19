@@ -2,15 +2,11 @@ pipeline {
     agent any
 
     environment {
-        ARM_SUBSCRIPTION_ID = credentials('ARM_SUBSCRIPTION_ID')
-        ARM_CLIENT_ID       = credentials('ARM_CLIENT_ID')
-        ARM_CLIENT_SECRET   = credentials('ARM_CLIENT_SECRET')
-        ARM_TENANT_ID       = credentials('ARM_TENANT_ID')
-        SSH_PUBLIC_KEY      = credentials('SSH_PUBLIC_KEY')
-        TF_WORKING_DIR      = "terraform"
+        TF_DIR = 'terraform'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -19,7 +15,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                dir("${TF_WORKING_DIR}") {
+                dir("${TF_DIR}") {
                     sh """
                         terraform init \
                         -backend-config="resource_group_name=TerraformStateRG" \
@@ -33,8 +29,15 @@ pipeline {
 
         stage('Terraform Plan') {
             steps {
-                dir("${TF_WORKING_DIR}") {
+                withCredentials([
+                    string(credentialsId: 'azure-subscription-id', variable: 'ARM_SUBSCRIPTION_ID'),
+                    string(credentialsId: 'azure-client-id',       variable: 'ARM_CLIENT_ID'),
+                    string(credentialsId: 'azure-client-secret',   variable: 'ARM_CLIENT_SECRET'),
+                    string(credentialsId: 'azure-tenant-id',       variable: 'ARM_TENANT_ID'),
+                    string(credentialsId: 'ssh-public-key',        variable: 'SSH_PUBLIC_KEY')
+                ]) {
                     sh """
+                        cd ${TF_DIR}
                         terraform plan -out=tfplan \
                         -var "subscription_id=${ARM_SUBSCRIPTION_ID}" \
                         -var "client_id=${ARM_CLIENT_ID}" \
@@ -48,7 +51,7 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                dir("${TF_WORKING_DIR}") {
+                dir("${TF_DIR}") {
                     sh 'terraform apply -auto-approve tfplan'
                 }
             }
