@@ -21,7 +21,19 @@ pipeline {
                     string(credentialsId: 'azure-client-secret',   variable: 'ARM_CLIENT_SECRET'),
                     string(credentialsId: 'azure-tenant-id',       variable: 'ARM_TENANT_ID')
                 ]) {
-                    sh 'bash -c "set -euo pipefail; cd ${TF_DIR}; terraform init -input=false; terraform plan -out=tfplan -input=false; terraform apply -auto-approve tfplan"'
+                    sh """
+                    bash -c '
+                    set -euo pipefail
+                    cd ${TF_DIR}
+                    terraform init -input=false
+                    terraform plan -out=tfplan -input=false \\
+                      -var "subscription_id=$ARM_SUBSCRIPTION_ID" \\
+                      -var "client_id=$ARM_CLIENT_ID" \\
+                      -var "client_secret=$ARM_CLIENT_SECRET" \\
+                      -var "tenant_id=$ARM_TENANT_ID"
+                    terraform apply -auto-approve tfplan
+                    '
+                    """
                 }
             }
         }
@@ -44,15 +56,6 @@ pipeline {
                     sh 'bash -c "set -euo pipefail; chmod 600 \$SSH_KEY_FILE; /opt/ansible-venv/bin/ansible-playbook -i inventory.ini playbook.yml --private-key \$SSH_KEY_FILE -u \$SSH_USER -e \"ansible_python_interpreter=/usr/bin/python3\""'
                 }
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'Pipeline terminé avec succès — infra provisionnée et app déployée.'
-        }
-        failure {
-            echo 'Pipeline échoué — vérifier les logs et les permissions.'
         }
     }
 }
