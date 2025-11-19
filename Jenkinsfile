@@ -21,28 +21,14 @@ pipeline {
                     string(credentialsId: 'azure-client-secret',   variable: 'ARM_CLIENT_SECRET'),
                     string(credentialsId: 'azure-tenant-id',       variable: 'ARM_TENANT_ID')
                 ]) {
-                    sh '''
-                        #!/bin/bash
-                        set -euo pipefail
-                        cd ${TF_DIR}
-                        terraform init -input=false
-                        terraform plan -out=tfplan -input=false
-                        terraform apply -auto-approve tfplan
-                    '''
+                    sh 'bash -c "set -euo pipefail; cd ${TF_DIR}; terraform init -input=false; terraform plan -out=tfplan -input=false; terraform apply -auto-approve tfplan"'
                 }
             }
         }
 
         stage('Generate Ansible Inventory') {
             steps {
-                sh '''
-                    #!/bin/bash
-                    set -euo pipefail
-                    cd ${TF_DIR}
-                    VM_IP=$(terraform output -raw vm_public_ip)
-                    echo "[web]" > ../inventory.ini
-                    echo "${VM_IP} ansible_user=azureuser" >> ../inventory.ini
-                '''
+                sh 'bash -c "set -euo pipefail; cd ${TF_DIR}; VM_IP=$(terraform output -raw vm_public_ip); echo \"[web]\" > ../inventory.ini; echo \"${VM_IP} ansible_user=azureuser\" >> ../inventory.ini"'
             }
         }
 
@@ -55,14 +41,7 @@ pipeline {
                         usernameVariable: 'SSH_USER'
                     )
                 ]) {
-                    sh '''
-                        #!/bin/bash
-                        set -euo pipefail
-                        chmod 600 "$SSH_KEY_FILE"
-                        /opt/ansible-venv/bin/ansible-playbook -i inventory.ini playbook.yml \
-                        --private-key "$SSH_KEY_FILE" -u "$SSH_USER" \
-                        -e "ansible_python_interpreter=/usr/bin/python3"
-                    '''
+                    sh 'bash -c "set -euo pipefail; chmod 600 \$SSH_KEY_FILE; /opt/ansible-venv/bin/ansible-playbook -i inventory.ini playbook.yml --private-key \$SSH_KEY_FILE -u \$SSH_USER -e \"ansible_python_interpreter=/usr/bin/python3\""'
                 }
             }
         }
