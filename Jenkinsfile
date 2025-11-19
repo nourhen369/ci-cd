@@ -26,11 +26,7 @@ pipeline {
                     set -euo pipefail
                     cd ${TF_DIR}
                     terraform init -input=false
-                    terraform plan -out=tfplan -input=false \\
-                      -var "subscription_id=$ARM_SUBSCRIPTION_ID" \\
-                      -var "client_id=$ARM_CLIENT_ID" \\
-                      -var "client_secret=$ARM_CLIENT_SECRET" \\
-                      -var "tenant_id=$ARM_TENANT_ID"
+                    terraform plan -out=tfplan -input=false -var "subscription_id=$ARM_SUBSCRIPTION_ID" -var "client_id=$ARM_CLIENT_ID" -var "client_secret=$ARM_CLIENT_SECRET" -var "tenant_id=$ARM_TENANT_ID"
                     terraform apply -auto-approve tfplan
                     '
                     """
